@@ -13,35 +13,46 @@ The common "mic on" sketchybar recipe polls `osascript -e 'input volume of (get 
 - **Accurate.** Reflects Talon modes (`sleep`, `command`, `dictation`, `mixed`), not raw mic volume.
 - **Arbitrary payload.** Ship any scope data (current app, active `.talon` files, mic gain) via env vars if you want.
 
+## Requirements
+
+- **macOS.** Sketchybar is macOS-only, so this bridge is too.
+- **Talon Voice** (any current version — uses the stable `registry.register("update_contexts", ...)` API).
+- **sketchybar** (tested on 2.x; uses `--add event` / `--subscribe` / `--trigger`).
+- **Karabiner-Elements** — optional, only for the double-tap-shift gesture.
+
 ## Install
+
+Clone once, then symlink the pieces into each ecosystem's expected location. Symlinks let you pull updates with a single `git pull`.
+
+```bash
+git clone https://github.com/ejfox/talon-sketchybar ~/code/talon-sketchybar
+cd ~/code/talon-sketchybar
+```
 
 ### 1. Talon side
 
-Copy `talon/sketchybar_bridge.py` into your Talon user directory:
+Talon walks `~/.talon/user/` recursively and loads any `.py` / `.talon` file it finds. Symlink the `talon/` directory so its contents are visible:
 
 ```bash
-mkdir -p ~/.talon/user/sketchybar
-cp talon/sketchybar_bridge.py ~/.talon/user/sketchybar/
+ln -s ~/code/talon-sketchybar/talon ~/.talon/user/sketchybar-bridge
 ```
 
-Talon auto-reloads Python files on save — no restart needed. Confirm in `~/.talon/talon.log`:
+Talon auto-reloads on symlink-create — no restart needed. Confirm in `~/.talon/talon.log`:
 
 ```
-DEBUG [+] /Users/you/.talon/user/sketchybar/sketchybar_bridge.py
+DEBUG [+] /Users/you/.talon/user/sketchybar-bridge/sketchybar_bridge.py
 ```
 
 ### 2. Sketchybar side
 
-Copy the plugin:
+Symlink the plugin into your sketchybar plugins directory, then paste the config block.
 
 ```bash
-cp sketchybar/plugins/talon.sh ~/.config/sketchybar/plugins/
-chmod +x ~/.config/sketchybar/plugins/talon.sh
+ln -s ~/code/talon-sketchybar/sketchybar/plugins/talon.sh \
+      ~/.config/sketchybar/plugins/talon.sh
 ```
 
-Paste `sketchybar/sketchybarrc.snippet` into your `~/.config/sketchybar/sketchybarrc` (the snippet registers the custom event, adds the item, subscribes it to `talon_state`, and points at the plugin).
-
-Reload sketchybar:
+Append the contents of [`sketchybar/sketchybarrc.example`](sketchybar/sketchybarrc.example) to your `~/.config/sketchybar/sketchybarrc` (it registers the custom event, adds the item, subscribes it to `talon_state`, and points at the plugin). Then reload:
 
 ```bash
 brew services restart sketchybar
@@ -56,6 +67,14 @@ sketchybar --trigger talon_state MODE=sleep     # item hides
 ```
 
 If that works, Talon is already driving the bar — try saying `talon sleep` and `talon wake` and watch the bar react.
+
+### Updating
+
+```bash
+cd ~/code/talon-sketchybar && git pull
+```
+
+Symlinks point at the repo checkout, so Talon picks up updated Python files on save and sketchybar re-runs the updated plugin on next trigger. No re-install, no restart (except if you change `sketchybarrc`).
 
 ## Bonus: double-tap right-shift to toggle Talon (Karabiner-Elements)
 
@@ -79,12 +98,11 @@ sketchybar_bridge.py  (already installed from the main section above)
 bar updates
 ```
 
-### 1. Install the mic-toggle script
+### 1. Symlink the mic-toggle script
 
 ```bash
 mkdir -p ~/bin
-cp karabiner/mic-toggle.sh ~/bin/mic-toggle
-chmod +x ~/bin/mic-toggle
+ln -s ~/code/talon-sketchybar/karabiner/mic-toggle.sh ~/bin/mic-toggle
 ```
 
 Quick check it works:
@@ -93,26 +111,23 @@ Quick check it works:
 ~/bin/mic-toggle    # mic flips; run twice to confirm both directions
 ```
 
-### 2. Install the Talon watcher
+### 2. The Talon watcher comes along for the ride
 
-```bash
-cp talon/mic_toggle.py ~/.talon/user/sketchybar/
-```
-
-Talon auto-loads it. The watcher reacts to any touch of `/tmp/talon-mic-toggle`.
+Because step 1 of the main install symlinked the entire `talon/` directory into `~/.talon/user/sketchybar-bridge/`, `mic_toggle.py` is already loaded. Nothing extra to do — it reacts to any touch of `/tmp/talon-mic-toggle`.
 
 ### 3. Install the Karabiner rule
 
-Karabiner doesn't have a "import from file" button — local rules live in `~/.config/karabiner/assets/complex_modifications/`:
+Karabiner doesn't have an "import from file" button — local rules live in `~/.config/karabiner/assets/complex_modifications/`. Symlink the JSON in:
 
 ```bash
 mkdir -p ~/.config/karabiner/assets/complex_modifications
-cp karabiner/right-shift-toggle.json ~/.config/karabiner/assets/complex_modifications/
+ln -s ~/code/talon-sketchybar/karabiner/right-shift-toggle.json \
+      ~/.config/karabiner/assets/complex_modifications/talon-sketchybar.json
 ```
 
 Then in the Karabiner-Elements app: **Complex Modifications → Add predefined rule → Enable** the "Double-tap right shift → toggle mic" rule.
 
-(The rule's `shell_command` path is `$HOME/bin/mic-toggle` — adjust if you installed the script elsewhere.)
+(The rule's `shell_command` is `$HOME/bin/mic-toggle` — adjust if you installed the script elsewhere.)
 
 ### Verify
 
