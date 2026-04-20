@@ -1,0 +1,41 @@
+{
+  "description": "Double-tap right shift → toggle mic (runs external shell script)",
+  "manipulators": [
+    {
+      "type": "basic",
+      "conditions": [
+        {
+          "type": "variable_if",
+          "name": "right_shift_pressed",
+          "value": 1
+        }
+      ],
+      "from": {
+        "key_code": "right_shift",
+        "modifiers": { "optional": ["any"] }
+      },
+      "to": [
+        { "shell_command": "$HOME/bin/mic-toggle" }
+      ]
+    },
+    {
+      "type": "basic",
+      "from": {
+        "key_code": "right_shift",
+        "modifiers": { "optional": ["any"] }
+      },
+      "to": [
+        { "set_variable": { "name": "right_shift_pressed", "value": 1 } },
+        { "key_code": "right_shift" }
+      ],
+      "to_delayed_action": {
+        "to_if_canceled": [
+          { "set_variable": { "name": "right_shift_pressed", "value": 0 } }
+        ],
+        "to_if_invoked": [
+          { "set_variable": { "name": "right_shift_pressed", "value": 0 } }
+        ]
+      }
+    }
+  ]
+}

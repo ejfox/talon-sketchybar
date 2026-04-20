@@ -57,38 +57,69 @@ sketchybar --trigger talon_state MODE=sleep     # item hides
 
 If that works, Talon is already driving the bar — try saying `talon sleep` and `talon wake` and watch the bar react.
 
-## Bonus: double-tap shift to toggle Talon (Karabiner-Elements)
+## Bonus: double-tap right-shift to toggle Talon (Karabiner-Elements)
 
-Uses Karabiner to turn a double-tap of left shift into an F19 keypress, which Talon binds to a sleep toggle. Result: tap-tap and the bar lights up or dims.
+A hands-free gesture: double-tap **right shift** to mute the mic (which also puts Talon to sleep) and double-tap again to unmute (which wakes Talon). The sketchybar item updates automatically because the bridge catches Talon's mode change — no extra plumbing.
 
-**Why F19?** It's a dead key on every macOS keyboard — never emitted accidentally — so binding it globally in Talon is safe. Karabiner is the translator; Talon is the consumer.
+The flow has four pieces:
 
-### Install the Karabiner rule
-
-Open **Karabiner-Elements → Complex Modifications → Add rule → Import more rules from the Internet**, or merge `karabiner/double-shift.json` into `~/.config/karabiner/karabiner.json` under `complex_modifications.rules`.
-
-Quick import:
-
-```bash
-open -a Karabiner-Elements
-# then: Preferences → Complex Modifications → Add rule → Import
-#       point at karabiner/double-shift.json
+```
+Karabiner (double-tap right_shift)
+    │
+    ▼  shell_command
+mic-toggle.sh  (flips input volume 0↔100, touches /tmp/talon-mic-toggle)
+    │
+    ▼  fs.watch
+Talon mic_toggle.py  (reads new volume, calls speech.enable/.disable)
+    │
+    ▼  mode change → update_contexts
+sketchybar_bridge.py  (already installed from the main section above)
+    │
+    ▼  sketchybar --trigger
+bar updates
 ```
 
-### Install the Talon binding
+### 1. Install the mic-toggle script
 
 ```bash
-cp karabiner/toggle_sleep.talon ~/.talon/user/sketchybar/
-cp karabiner/toggle_sleep.py    ~/.talon/user/sketchybar/
+mkdir -p ~/bin
+cp karabiner/mic-toggle.sh ~/bin/mic-toggle
+chmod +x ~/bin/mic-toggle
 ```
 
-`toggle_sleep.py` defines `user.talon_sleep_toggle()` and `toggle_sleep.talon` binds F19 → that action globally. When the action fires, Talon's mode changes → `sketchybar_bridge.py` catches it → the bar updates. All one atomic chain.
+Quick check it works:
+
+```bash
+~/bin/mic-toggle    # mic flips; run twice to confirm both directions
+```
+
+### 2. Install the Talon watcher
+
+```bash
+cp talon/mic_toggle.py ~/.talon/user/sketchybar/
+```
+
+Talon auto-loads it. The watcher reacts to any touch of `/tmp/talon-mic-toggle`.
+
+### 3. Install the Karabiner rule
+
+Karabiner doesn't have a "import from file" button — local rules live in `~/.config/karabiner/assets/complex_modifications/`:
+
+```bash
+mkdir -p ~/.config/karabiner/assets/complex_modifications
+cp karabiner/right-shift-toggle.json ~/.config/karabiner/assets/complex_modifications/
+```
+
+Then in the Karabiner-Elements app: **Complex Modifications → Add predefined rule → Enable** the "Double-tap right shift → toggle mic" rule.
+
+(The rule's `shell_command` path is `$HOME/bin/mic-toggle` — adjust if you installed the script elsewhere.)
 
 ### Verify
 
-1. Press shift-shift rapidly. The bar should toggle between hidden and a pink `TALON` pill.
-2. If nothing happens, check Karabiner's EventViewer (double-tap should emit F19).
-3. If F19 fires but Talon doesn't toggle, verify `talon sleep toggle` works manually by voice first.
+1. Double-tap right shift. Mic should mute (input volume → 0) and Talon should stop responding to voice.
+2. The bar item should hide (Talon's speech is disabled, so no command mode).
+3. Double-tap again. Mic unmutes, Talon resumes, bar pill reappears.
+4. If nothing fires, open Karabiner EventViewer and confirm two right-shift presses within ~300ms trigger the rule.
 
 ## Customizing
 
