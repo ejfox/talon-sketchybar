@@ -1,0 +1,18 @@
+# Paste this snippet into your ~/.config/sketchybar/sketchybarrc.
+# Adjust PLUGIN_DIR to match your setup.
+
+PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
+
+##### Talon Voice State #####
+# State is pushed from ~/.talon/user/<your_folder>/sketchybar_bridge.py via
+# `sketchybar --trigger talon_state MODE=<mode>` on every context change.
+# No polling — the item is purely event-driven.
+sketchybar --add event talon_state
+sketchybar --add item talon left \
+  --set talon \
+  updates=on \
+  script="$PLUGIN_DIR/talon.sh" \
+  drawing=off \
+  icon.font="Monaspace Krypton:Bold:11.0" \
+  label.drawing=off \
+  --subscribe talon talon_state

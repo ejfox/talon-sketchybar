@@ -1,0 +1,44 @@
+{
+  "title": "Double-tap left shift → F19 (for Talon toggle)",
+  "maintainers": ["ejfox"],
+  "rules": [
+    {
+      "description": "Double-tap left_shift within 300ms → F19",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "left_shift",
+            "modifiers": { "optional": ["any"] }
+          },
+          "to": [{ "key_code": "f19" }],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "shift_tapped",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "left_shift",
+            "modifiers": { "optional": ["any"] }
+          },
+          "to": [{ "key_code": "left_shift" }],
+          "to_if_alone": [
+            { "set_variable": { "name": "shift_tapped", "value": 1 } },
+            {
+              "set_variable": { "name": "shift_tapped", "value": 0 },
+              "lazy": true
+            }
+          ],
+          "parameters": {
+            "basic.to_delayed_action_delay_milliseconds": 300
+          }
+        }
+      ]
+    }
+  ]
+}
